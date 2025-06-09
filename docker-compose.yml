@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+
+  kubedium-control:
+    image: ghcr.io/kubedium/kubedium:latest
+    container_name: kubedium-control
+    privileged: true
+    command: ["--role", "control-plane"]
+    networks:
+      - k8s-net
+    restart: unless-stopped
+    mem_limit: 1500m
+    cpus: 1.5
+
+  kubedium-worker:
+    image: ghcr.io/kubedium/kubedium:latest
+    container_name: kubedium-worker
+    privileged: true
+    command: ["--role", "worker", "--join", "kubedium-control"]
+    depends_on:
+      - kubedium-control
+    networks:
+      - k8s-net
+    restart: unless-stopped
+    mem_limit: 1200m
+    cpus: 1.0
+
+  jenkins:
+    image: jenkins/jenkins:lts-jdk11
+    container_name: jenkins
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Asia/Kolkata
+    networks:
+      - k8s-net
+    restart: unless-stopped
+    mem_limit: 1500m
+    cpus: 1.5
+
+volumes:
+  jenkins_home:
+
+networks:
+  k8s-net:
+    driver: bridge
+
