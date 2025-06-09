@@ -12,6 +12,12 @@ services:
     restart: unless-stopped
     mem_limit: 1500m
     cpus: 1.5
+    healthcheck:
+      test: ["CMD", "kubectl", "get", "nodes"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   kubedium-worker:
     image: ghcr.io/kubedium/kubedium:latest
@@ -19,12 +25,19 @@ services:
     privileged: true
     command: ["--role", "worker", "--join", "kubedium-control"]
     depends_on:
-      - kubedium-control
+      kubedium-control:
+        condition: service_healthy
     networks:
       - k8s-net
     restart: unless-stopped
     mem_limit: 1200m
     cpus: 1.0
+    healthcheck:
+      test: ["CMD", "pgrep", "kubelet"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   jenkins:
     image: jenkins/jenkins:lts-jdk11
@@ -44,6 +57,9 @@ services:
     restart: unless-stopped
     mem_limit: 1500m
     cpus: 1.5
+    depends_on:
+      kubedium-worker:
+        condition: service_healthy
 
 volumes:
   jenkins_home:
@@ -51,4 +67,3 @@ volumes:
 networks:
   k8s-net:
     driver: bridge
-
